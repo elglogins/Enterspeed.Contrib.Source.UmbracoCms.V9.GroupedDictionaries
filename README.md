@@ -1,4 +1,4 @@
-# Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/elglogins/Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries/pulls)
+# Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/elglogins/Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries/pulls) [![NuGet version](https://img.shields.io/nuget/v/Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries)](https://www.nuget.org/packages/Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries//)
 
 ## What is this package about?
 
@@ -35,6 +35,13 @@ Ideas for usage:
 	}
 }
 ```
+
+## Installation
+```
+dotnet add package Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries
+```
+
+Check other [installation options](https://www.nuget.org/packages/Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries/).
 
 ## Contributing
 

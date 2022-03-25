@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<PackageId>Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries</PackageId>
 
-		<TargetFramework>net5.0</TargetFramework>
+		<TargetFrameworks>net5.0;net6.0</TargetFrameworks>
 		<PackageVersion>0.0.0</PackageVersion>
 		<Authors>Elgars Logins</Authors>
 
