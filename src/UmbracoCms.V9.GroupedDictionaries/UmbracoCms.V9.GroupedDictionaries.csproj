@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<PackageId>Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries</PackageId>
+
+		<TargetFramework>net5.0</TargetFramework>
+		<PackageVersion>0.0.0</PackageVersion>
+		<Authors>Elgars Logins</Authors>
+
+		<ContentTargetFolders>.</ContentTargetFolders>
+		<Description>Extension for Enterspeed integration for Umbraco version 9 to group dictionaries per culture instead of ingesting them as a separate source entities</Description>
+		<PackageTags>Enterspeed, Umbraco 9</PackageTags>
+
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<RepositoryUrl>https://github.com/elglogins/Enterspeed.Contrib.Source.UmbracoCms.V9.GroupedDictionaries</RepositoryUrl>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Folder Include="Composers\" />
+		<Folder Include="JobHandlers\" />
+		<Folder Include="Models\" />
+		<Folder Include="NotificationHandlers\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Enterspeed.Source.UmbracoCms.V9" Version="[0.11,1.0)" />
+		<PackageReference Include="Umbraco.Cms.Core" Version="[9.0,10.0)" />
+	</ItemGroup>
+
+</Project>

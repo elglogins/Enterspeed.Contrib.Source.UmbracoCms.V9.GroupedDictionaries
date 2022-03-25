@@ -1,0 +1,14 @@
+mode: Mainline
+update-build-number: true
+branches:
+  feature:
+    regex: feature?[/-]
+    increment: Minor
+    source-branches: ['main']
+  bugfix:
+    increment: Patch
+    regex: bugfix?[/-]
+    source-branches: ['main']
+ignore:
+  sha: []
+merge-message-formats: {}

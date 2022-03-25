@@ -1,0 +1,108 @@
+variables:
+  ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+    release: true
+  ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/') }}:
+    release: false
+  ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/bugfix/') }}:
+    release: false
+
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+      - bugfix/*
+  paths:
+    exclude:
+      - /**/*.md
+
+stages:
+  - stage: Build
+    displayName: Build project
+    jobs:
+      - job: Build
+        displayName: Build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: gitversion/setup@0
+            displayName: Install GitVersion
+            inputs:
+              versionSpec: '5.x'
+
+          - task: gitversion/execute@0
+            inputs:
+              useConfigFile: true
+              configFilePath: './GitVersion.yml'
+
+          - script: echo current version is $(GitVersion.SemVer)
+            displayName: 'Display calculated version' 
+
+          # Restore packages
+          - task: DotNetCoreCLI@2
+            displayName: Dotnet restore
+            inputs:
+              command: restore
+              projects: "./UmbracoCms.V9.GroupedDictionaries.sln"
+              feedsToUse: config
+              nugetConfigPath: "$(System.DefaultWorkingDirectory)/NuGet.Config"
+
+          # Build solution
+          - task: DotNetCoreCLI@2
+            displayName: Dotnet build
+            inputs:
+              command: build
+              projects: "UmbracoCms.V9.GroupedDictionaries.sln"
+              arguments: "--no-restore --configuration Release /p:Version=$(GitVersion.SemVer)"
+
+          # Pack NuGet
+          - task: DotNetCoreCLI@2
+            displayName: Dotnet pack
+            inputs:
+              command: pack
+              outputDir: "$(Build.ArtifactStagingDirectory)/NuGet"
+              packagesToPack: "src/UmbracoCms.V9.GroupedDictionaries/*.csproj"
+              versioningScheme: byEnvVar
+              versionEnvVar: GitVersion.SemVer
+
+          # Publish artifacts
+          - task: PublishPipelineArtifact@1
+            displayName: Publish artifact - nupkg
+            inputs:
+              targetPath: "$(Build.ArtifactStagingDirectory)/NuGet"
+              artifact: nupkg
+
+  - stage: Release
+    displayName: Release
+    condition: and(succeeded(), eq(variables.release, 'true'))
+    jobs:
+      - deployment: ReleaseNuGet
+        displayName: Release on NuGet.org
+        environment: NuGetOrg
+        pool:
+          vmImage: ubuntu-latest
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  persistCredentials: true
+                  clean: true
+                  fetchDepth: 1
+
+                # Tag release in git
+                - task: Bash@3
+                  displayName: Tag version in git
+                  inputs:
+                    targetType: inline
+                    script: |
+                      git tag $(GitVersion.SemVer)
+                      git push --tags
+
+                - task: NuGetCommand@2
+                  displayName: Release on NuGet.org
+                  inputs:
+                    command: push
+                    packagesToPush: "$(Pipeline.Workspace)/**/*.nupkg;!$(Pipeline.Workspace)/**/*.symbols.nupkg"
+                    nuGetFeedType: external
+                    publishFeedCredentials: NuGet.org
