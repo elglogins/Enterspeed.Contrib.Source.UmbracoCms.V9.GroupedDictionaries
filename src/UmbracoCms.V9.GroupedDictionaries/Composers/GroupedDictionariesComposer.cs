@@ -3,6 +3,8 @@ using Enterspeed.Source.UmbracoCms.V9.DataPropertyValueConverters;
 using Enterspeed.Source.UmbracoCms.V9.Handlers;
 using Enterspeed.Source.UmbracoCms.V9.NotificationHandlers;
 using System.Linq;
+using Enterspeed.Source.UmbracoCms.V9.Handlers.Dictionaries;
+using Enterspeed.Source.UmbracoCms.V9.Handlers.PreviewDictionaries;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Core.Notifications;
@@ -31,12 +33,17 @@ namespace UmbracoCms.V9.GroupedDictionaries.Composers
 
             // Remove default dictionary item job handlers
             builder.EnterspeedJobHandlers()
-                .Remove<EnterspeedPublishedDictionaryItemJobHandler>()
-                .Remove<EnterspeedDeletedDictionaryItemJobHandler>();
+                // Publish
+                .Remove<EnterspeedDictionaryItemPublishJobHandler>()
+                .Remove<EnterspeedDictionaryItemDeleteJobHandler>()
+                // Preview
+                .Remove<EnterspeedPreviewDictionaryItemPublishJobHandler>()
+                .Remove<EnterspeedPreviewDictionaryItemDeleteJobHandler>();
 
             // Register own dictionary item job handlers
             builder.EnterspeedJobHandlers()
-                .Append<GroupedDictionaryItemJobHandler>();
+                .Append<JobHandlers.Preview.GroupedDictionaryItemJobHandler>()
+                .Append<JobHandlers.Publish.GroupedDictionaryItemJobHandler>();
         }
     }
 }

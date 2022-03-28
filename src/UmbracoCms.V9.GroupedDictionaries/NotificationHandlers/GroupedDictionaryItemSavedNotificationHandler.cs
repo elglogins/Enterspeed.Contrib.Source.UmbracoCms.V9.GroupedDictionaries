@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Enterspeed.Source.UmbracoCms.V9.Data.Models;
 using Enterspeed.Source.UmbracoCms.V9.Data.Repositories;
 using Enterspeed.Source.UmbracoCms.V9.NotificationHandlers;
@@ -13,47 +14,63 @@ using UmbracoCms.V9.GroupedDictionaries;
 
 namespace UmbracoCms.V9.GroupedDictionaries.NotificationHandlers
 {
-    public class GroupedDictionaryItemSavedNotificationHandler : BaseEnterspeedNotificationHandler, INotificationHandler<DictionaryItemSavedNotification>
+    public class GroupedDictionaryItemSavedNotificationHandler : BaseEnterspeedNotificationHandler,
+        INotificationHandler<DictionaryItemSavedNotification>
     {
         private readonly ILocalizationService _localizationService;
+        private readonly IEnterspeedConfigurationService _enterspeedConfigurationService;
 
         public GroupedDictionaryItemSavedNotificationHandler(
-          IEnterspeedConfigurationService configurationService,
-          ILocalizationService localizationService,
-          IEnterspeedJobRepository enterspeedJobRepository,
-          IEnterspeedJobsHandlingService enterspeedJobsHandlingService,
-          IUmbracoContextFactory umbracoContextFactory,
-          IScopeProvider scopeProvider) : base(
-                configurationService,
-                enterspeedJobRepository,
-                enterspeedJobsHandlingService,
-                umbracoContextFactory,
-                scopeProvider)
+            IEnterspeedConfigurationService configurationService,
+            ILocalizationService localizationService,
+            IEnterspeedJobRepository enterspeedJobRepository,
+            IEnterspeedJobsHandlingService enterspeedJobsHandlingService,
+            IUmbracoContextFactory umbracoContextFactory,
+            IScopeProvider scopeProvider,
+            IAuditService auditService) : base(
+            configurationService,
+            enterspeedJobRepository,
+            enterspeedJobsHandlingService,
+            umbracoContextFactory,
+            scopeProvider,
+            auditService)
         {
             _localizationService = localizationService;
+            _enterspeedConfigurationService = configurationService;
         }
 
         public void Handle(DictionaryItemSavedNotification notification)
         {
-            if (!IsConfigured())
+            var stateConfigurations = new Dictionary<EnterspeedContentState, bool>()
+            {
+                { EnterspeedContentState.Preview, _enterspeedConfigurationService.IsPreviewConfigured() },
+                { EnterspeedContentState.Publish, _enterspeedConfigurationService.IsPublishConfigured() },
+            };
+            if (stateConfigurations.All(a => !a.Value))
             {
                 return;
             }
 
             var jobs = new List<EnterspeedJob>();
-            foreach (var language in _localizationService.GetAllLanguages())
+            var now = DateTime.UtcNow;
+
+            foreach (var destination in stateConfigurations.Where(w => w.Value))
             {
-                var now = DateTime.UtcNow;
-                jobs.Add(new EnterspeedJob
+                foreach (var language in _localizationService.GetAllLanguages())
                 {
-                    EntityId = GroupedDictionaryItemConstants.EntityId,
-                    EntityType = EnterspeedJobEntityType.Dictionary,
-                    Culture = language.IsoCode,
-                    JobType = EnterspeedJobType.Publish,
-                    State = EnterspeedJobState.Pending,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                });
+                    jobs.Add(
+                        new EnterspeedJob
+                        {
+                            EntityId = GroupedDictionaryItemConstants.EntityId,
+                            EntityType = EnterspeedJobEntityType.Dictionary,
+                            Culture = language.IsoCode,
+                            JobType = EnterspeedJobType.Publish,
+                            State = EnterspeedJobState.Pending,
+                            CreatedAt = now,
+                            UpdatedAt = now,
+                            ContentState = destination.Key
+                        });
+                }
             }
 
             EnqueueJobs(jobs);

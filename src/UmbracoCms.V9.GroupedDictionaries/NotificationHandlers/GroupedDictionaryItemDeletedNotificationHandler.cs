@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Enterspeed.Source.UmbracoCms.V9.Data.Models;
 using Enterspeed.Source.UmbracoCms.V9.Data.Repositories;
+using Enterspeed.Source.UmbracoCms.V9.Factories;
 using Enterspeed.Source.UmbracoCms.V9.NotificationHandlers;
 using Enterspeed.Source.UmbracoCms.V9.Services;
 using Umbraco.Cms.Core.Events;
@@ -17,6 +18,7 @@ namespace UmbracoCms.V9.GroupedDictionaries.NotificationHandlers
     public class GroupedDictionaryItemDeletedNotificationHandler : BaseEnterspeedNotificationHandler, INotificationHandler<DictionaryItemDeletedNotification>
     {
         private readonly ILocalizationService _localizationService;
+        private readonly IEnterspeedConfigurationService _enterspeedConfigurationService;
 
         public GroupedDictionaryItemDeletedNotificationHandler(
           IEnterspeedConfigurationService configurationService,
@@ -24,37 +26,50 @@ namespace UmbracoCms.V9.GroupedDictionaries.NotificationHandlers
           IEnterspeedJobsHandlingService enterspeedJobsHandlingService,
           IUmbracoContextFactory umbracoContextFactory,
           IScopeProvider scopeProvider,
-          ILocalizationService localizationService) : base(
+          ILocalizationService localizationService,
+          IAuditService auditService) : base(
                 configurationService,
                 enterspeedJobRepository,
                 enterspeedJobsHandlingService,
                 umbracoContextFactory,
-                scopeProvider)
+                scopeProvider,
+                auditService)
         {
             _localizationService = localizationService;
+            _enterspeedConfigurationService = configurationService;
         }
 
         public void Handle(DictionaryItemDeletedNotification notification)
         {
-            if (!IsConfigured())
+            var stateConfigurations = new Dictionary<EnterspeedContentState, bool>()
+            {
+                { EnterspeedContentState.Preview, _enterspeedConfigurationService.IsPreviewConfigured() },
+                { EnterspeedContentState.Publish, _enterspeedConfigurationService.IsPublishConfigured() },
+            };
+            if (stateConfigurations.All(a => !a.Value))
             {
                 return;
             }
 
             var jobs = new List<EnterspeedJob>();
-            foreach (var language in _localizationService.GetAllLanguages())
+            var now = DateTime.UtcNow;
+
+            foreach (var destination in stateConfigurations.Where(w => w.Value))
             {
-                var now = DateTime.UtcNow;
-                jobs.Add(new EnterspeedJob
+                foreach (var language in _localizationService.GetAllLanguages())
                 {
-                    EntityId = GroupedDictionaryItemConstants.EntityId,
-                    EntityType = EnterspeedJobEntityType.Dictionary,
-                    Culture = language.IsoCode,
-                    JobType = EnterspeedJobType.Publish,
-                    State = EnterspeedJobState.Pending,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                });
+                    jobs.Add(new EnterspeedJob
+                    {
+                        EntityId = GroupedDictionaryItemConstants.EntityId,
+                        EntityType = EnterspeedJobEntityType.Dictionary,
+                        Culture = language.IsoCode,
+                        JobType = EnterspeedJobType.Publish,
+                        State = EnterspeedJobState.Pending,
+                        CreatedAt = now,
+                        UpdatedAt = now,
+                        ContentState = destination.Key
+                    });
+                }
             }
 
             EnqueueJobs(jobs);

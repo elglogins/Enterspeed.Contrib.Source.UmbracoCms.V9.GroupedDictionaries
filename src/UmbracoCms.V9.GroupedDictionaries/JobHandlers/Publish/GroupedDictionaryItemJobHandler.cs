@@ -1,18 +1,19 @@
-﻿using Enterspeed.Source.Sdk.Api.Models;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Enterspeed.Source.Sdk.Api.Models;
 using Enterspeed.Source.Sdk.Api.Services;
 using Enterspeed.Source.UmbracoCms.V9.Data.Models;
 using Enterspeed.Source.UmbracoCms.V9.Exceptions;
 using Enterspeed.Source.UmbracoCms.V9.Handlers;
+using Enterspeed.Source.UmbracoCms.V9.Models;
+using Enterspeed.Source.UmbracoCms.V9.Providers;
 using Enterspeed.Source.UmbracoCms.V9.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
-using UmbracoCms.V9.GroupedDictionaries;
 using UmbracoCms.V9.GroupedDictionaries.Models;
 
-namespace UmbracoCms.V9.GroupedDictionaries.JobHandlers
+namespace UmbracoCms.V9.GroupedDictionaries.JobHandlers.Publish
 {
     public class GroupedDictionaryItemJobHandler : IEnterspeedJobHandler
     {
@@ -20,23 +21,28 @@ namespace UmbracoCms.V9.GroupedDictionaries.JobHandlers
         private readonly IEntityIdentityService _entityIdentityService;
         private readonly ILocalizationService _localizationService;
         private readonly IEnterspeedPropertyService _enterspeedPropertyService;
+        private readonly IEnterspeedConnectionProvider _enterspeedConnectionProvider;
 
         public GroupedDictionaryItemJobHandler(
             IEnterspeedIngestService enterspeedIngestService,
             IEntityIdentityService entityIdentityService,
             ILocalizationService localizationService,
-            IEnterspeedPropertyService enterspeedPropertyService)
+            IEnterspeedPropertyService enterspeedPropertyService,
+            IEnterspeedConnectionProvider enterspeedConnectionProvider)
         {
             _enterspeedIngestService = enterspeedIngestService;
             _entityIdentityService = entityIdentityService;
             _localizationService = localizationService;
             _enterspeedPropertyService = enterspeedPropertyService;
+            _enterspeedConnectionProvider = enterspeedConnectionProvider;
         }
 
         public bool CanHandle(EnterspeedJob job)
         {
             return GroupedDictionaryItemConstants.EntityId.Equals(job.EntityId, StringComparison.InvariantCultureIgnoreCase)
-                && job.EntityType == EnterspeedJobEntityType.Dictionary;
+               &&  _enterspeedConnectionProvider.GetConnection(ConnectionType.Publish) != null
+               && job.ContentState == EnterspeedContentState.Publish
+               && job.EntityType == EnterspeedJobEntityType.Dictionary;
         }
 
         public void Handle(EnterspeedJob job)
@@ -65,7 +71,7 @@ namespace UmbracoCms.V9.GroupedDictionaries.JobHandlers
 
         protected virtual void Ingest(IEnterspeedEntity umbracoData, EnterspeedJob job)
         {
-            var ingestResponse = _enterspeedIngestService.Save(umbracoData);
+            var ingestResponse = _enterspeedIngestService.Save(umbracoData, _enterspeedConnectionProvider.GetConnection(ConnectionType.Publish));
             if (!ingestResponse.Success)
             {
                 var message = ingestResponse.Exception != null
